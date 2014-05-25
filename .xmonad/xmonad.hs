@@ -1,5 +1,9 @@
 import XMonad
+import XMonad.Util.Run(spawnPipe)
+import XMonad.Hooks.DynamicLog
+import XMonad.Hooks.ManageDocks
 import XMonad.Layout.Decoration
+import System.IO
 
 -- Solarized Colors
 base03  = "#002b36"
@@ -72,11 +76,35 @@ altTileTheme = baseTheme
     , activeTextColor       = base03
     }
 
-main = xmonad $ defaultConfig
-  { borderWidth         = 2
-  , terminal            = "terminology"
-  , normalBorderColor   = myNormalBorderColor
-  , focusedBorderColor  = myFocusedBorderColor
-  , focusFollowsMouse   = False
-  , clickJustFocuses    = False
-  }
+config = xmonad $ defaultConfig
+
+myPP = defaultPP
+    { ppHidden            = id
+    , ppHiddenNoWindows   = const ""
+    , ppSep               = " : "
+    , ppWsSep             = " "
+    , ppLayout            = id
+    , ppOrder             = id
+    , ppOutput            = putStrLn xmproc
+    , ppExtras            = []
+    }
+
+main = do
+  xmproc <- spawnPipe "/usr/bin/xmobar ~/.xmobarrc"
+  xmonad $ defaultConfig
+    { borderWidth         = 2
+    , terminal            = "terminology"
+    , normalBorderColor   = myNormalBorderColor
+    , focusedBorderColor  = myFocusedBorderColor
+    , focusFollowsMouse   = False
+    , clickJustFocuses    = False
+    , manageHook = manageDocks <+> manageHook defaultConfig
+    , layoutHook = avoidStruts  $  layoutHook defaultConfig
+    , logHook = dynamicLogWithPP xmobarPP
+                    { ppOutput = hPutStrLn xmproc
+                    , ppCurrent = xmobarColor base02 active . wrap " " " "
+                    , ppTitle = xmobarColor active "" . shorten 40
+                    , ppVisible = wrap "(" ")"
+                    , ppUrgent  = xmobarColor base02 yellow . wrap " " " "
+                    }
+    }
